@@ -6,6 +6,9 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.util.Log
 import android.util.Pair
+import android.view.GestureDetector
+import android.view.MotionEvent
+import com.difrancescogianmarco.arcore_flutter_plugin.flutter_models.FlutterArCoreHitTestResult
 import com.difrancescogianmarco.arcore_flutter_plugin.flutter_models.FlutterArCoreNode
 import com.difrancescogianmarco.arcore_flutter_plugin.flutter_models.FlutterArCorePose
 import com.difrancescogianmarco.arcore_flutter_plugin.utils.ArCoreUtils
@@ -25,11 +28,13 @@ import java.io.IOException
 import java.util.*
 import com.google.ar.core.exceptions.*
 import com.google.ar.core.*
+import com.google.ar.sceneform.HitTestResult
 import kotlinx.coroutines.*
 import kotlin.coroutines.CoroutineContext
 
 class ArCoreAugmentedImagesView(activity: Activity, context: Context, messenger: BinaryMessenger, id: Int, val useSingleImage: Boolean, debug: Boolean) : BaseArCoreView(activity, context, messenger, id, debug), CoroutineScope {
 
+    private val gestureDetector: GestureDetector
     private val TAG: String = ArCoreAugmentedImagesView::class.java.name
     private var sceneUpdateListener: Scene.OnUpdateListener
     // Augmented image and its associated center pose anchor, keyed by index of the augmented image in
@@ -42,6 +47,19 @@ class ArCoreAugmentedImagesView(activity: Activity, context: Context, messenger:
         get() = Dispatchers.Main + job
 
     init {
+
+        gestureDetector = GestureDetector(
+            context,
+            object : GestureDetector.SimpleOnGestureListener() {
+                override fun onSingleTapUp(e: MotionEvent): Boolean {
+                    onSingleTap(e)
+                    return true
+                }
+
+                override fun onDown(e: MotionEvent): Boolean {
+                    return true
+                }
+            })
 
         sceneUpdateListener = Scene.OnUpdateListener { frameTime ->
 
@@ -103,30 +121,30 @@ class ArCoreAugmentedImagesView(activity: Activity, context: Context, messenger:
         }
     }
 
-/*    fun setImage(image: AugmentedImage, anchorNode: AnchorNode) {
-        if (!mazeRenderable.isDone) {
-            Log.d(TAG, "loading maze renderable still in progress. Wait to render again")
-            CompletableFuture.allOf(mazeRenderable)
-                    .thenAccept { aVoid: Void -> setImage(image, anchorNode) }
-                    .exceptionally { throwable ->
-                        Log.e(TAG, "Exception loading", throwable)
-                        null
-                    }
-            return
-        }
+    /*    fun setImage(image: AugmentedImage, anchorNode: AnchorNode) {
+            if (!mazeRenderable.isDone) {
+                Log.d(TAG, "loading maze renderable still in progress. Wait to render again")
+                CompletableFuture.allOf(mazeRenderable)
+                        .thenAccept { aVoid: Void -> setImage(image, anchorNode) }
+                        .exceptionally { throwable ->
+                            Log.e(TAG, "Exception loading", throwable)
+                            null
+                        }
+                return
+            }
 
-        // Set the anchor based on the center of the image.
-        // anchorNode.anchor = image.createAnchor(image.centerPose)
+            // Set the anchor based on the center of the image.
+            // anchorNode.anchor = image.createAnchor(image.centerPose)
 
-        val mazeNode = Node()
-        mazeNode.setParent(anchorNode)
-        mazeNode.renderable = mazeRenderable.getNow(null)
+            val mazeNode = Node()
+            mazeNode.setParent(anchorNode)
+            mazeNode.renderable = mazeRenderable.getNow(null)
 
-        *//* // Make sure longest edge fits inside the image
+            *//* // Make sure longest edge fits inside the image
          val maze_edge_size = 492.65f
          val max_image_edge = Math.max(image.extentX, image.extentZ)
          val maze_scale = max_image_edge / maze_edge_size
- 
+
          // Scale Y extra 10 times to lower the wall of maze
          mazeNode.localScale = Vector3(maze_scale, maze_scale * 0.1f, maze_scale)*//*
     }*/
@@ -210,7 +228,31 @@ class ArCoreAugmentedImagesView(activity: Activity, context: Context, messenger:
     }
 
     private fun arScenViewInit(call: MethodCall, result: MethodChannel.Result) {
+        val enableTapRecognizer: Boolean? = call.argument("enableTapRecognizer")
+        if (enableTapRecognizer != null && enableTapRecognizer) {
+            arSceneView
+                ?.scene
+                ?.setOnTouchListener { hitTestResult: HitTestResult, event: MotionEvent? ->
+
+                    if (hitTestResult.node != null) {
+                        debugLog(" onNodeTap " + hitTestResult.node?.name)
+                        debugLog(hitTestResult.node?.localPosition.toString())
+                        debugLog(hitTestResult.node?.worldPosition.toString())
+                        methodChannel.invokeMethod("onNodeTap", hitTestResult.node?.name)
+                        return@setOnTouchListener true
+                    }
+                    return@setOnTouchListener event?.let { gestureDetector.onTouchEvent(it) } == true
+                }
+        }
+
         arSceneView?.scene?.addOnUpdateListener(sceneUpdateListener)
+
+        val enablePlaneRenderer: Boolean? = call.argument("enablePlaneRenderer")
+        if (enablePlaneRenderer != null && !enablePlaneRenderer) {
+            debugLog(" The plane renderer (enablePlaneRenderer) is set to " + enablePlaneRenderer.toString())
+            arSceneView!!.planeRenderer.isVisible = false
+        }
+
         onResume()
         result.success(null)
     }
@@ -313,7 +355,7 @@ class ArCoreAugmentedImagesView(activity: Activity, context: Context, messenger:
                         augmentedImageDatabase.addImage(key, augmentedImageBitmap)
                     } catch (ex: Exception) {
                         debugLog("Image with the title $key cannot be added to the database. " +
-                        "The exception was thrown: " + ex?.toString())
+                                "The exception was thrown: " + ex?.toString())
                     }
                 }
                 if (augmentedImageDatabase?.getNumImages() == 0) {
@@ -356,11 +398,35 @@ class ArCoreAugmentedImagesView(activity: Activity, context: Context, messenger:
 
     private fun loadAugmentedImageBitmap(bitmapdata: ByteArray): Bitmap? {
         debugLog( "loadAugmentedImageBitmap")
-       try {
-           return  BitmapFactory.decodeByteArray(bitmapdata, 0, bitmapdata.size)
+        try {
+            return  BitmapFactory.decodeByteArray(bitmapdata, 0, bitmapdata.size)
         } catch (e: Exception) {
             Log.e(TAG, "IO exception loading augmented image bitmap.", e)
             return  null
+        }
+    }
+
+    private fun onSingleTap(tap: MotionEvent?) {
+        debugLog(" onSingleTap")
+        val frame = arSceneView?.arFrame
+        if (frame != null) {
+            if (tap != null && frame.camera.trackingState == TrackingState.TRACKING) {
+                val hitList = frame.hitTest(tap)
+                val list = ArrayList<HashMap<String, Any>>()
+                for (hit in hitList) {
+                    val trackable = hit.trackable
+                    if (trackable is Plane && trackable.isPoseInPolygon(hit.hitPose)) {
+                        hit.hitPose
+                        val distance: Float = hit.distance
+                        val translation = hit.hitPose.translation
+                        val rotation = hit.hitPose.rotationQuaternion
+                        val flutterArCoreHitTestResult = FlutterArCoreHitTestResult(distance, translation, rotation)
+                        val arguments = flutterArCoreHitTestResult.toHashMap()
+                        list.add(arguments)
+                    }
+                }
+                methodChannel.invokeMethod("onPlaneTap", list)
+            }
         }
     }
 }

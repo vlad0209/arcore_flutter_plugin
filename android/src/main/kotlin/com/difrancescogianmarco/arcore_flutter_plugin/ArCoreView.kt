@@ -548,7 +548,7 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
                     }
                     config.updateMode = Config.UpdateMode.LATEST_CAMERA_IMAGE
                     config.focusMode = Config.FocusMode.AUTO
-                    if (enableGeospatialMode) {
+                    if (enableGeospatialMode && session.isGeospatialModeSupported(GeospatialMode.ENABLED)) {
                         config.geospatialMode = Config.GeospatialMode.ENABLED
                     }
                     session.configure(config)

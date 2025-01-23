@@ -17,6 +17,7 @@ class ArCoreView extends StatefulWidget {
   final bool enableUpdateListener;
   final bool debug;
   final ArCoreViewType type;
+  final bool enableGeospatialMode;
 
   const ArCoreView(
       {Key? key,
@@ -26,7 +27,8 @@ class ArCoreView extends StatefulWidget {
       this.enablePlaneRenderer = true,
       this.enableUpdateListener = false,
       this.type = ArCoreViewType.STANDARDVIEW,
-      this.debug = false})
+      this.debug = false,
+      this.enableGeospatialMode = false})
       : super(key: key);
 
   @override
@@ -49,6 +51,7 @@ class _ArCoreViewState extends State<ArCoreView> with WidgetsBindingObserver {
           onPlatformViewCreated: _onPlatformViewCreated,
           arCoreViewType: widget.type,
           debug: widget.debug,
+          enableGeospatialMode: widget.enableGeospatialMode,
         ),
       );
     }

@@ -35,13 +35,14 @@ import android.os.Environment
 import android.view.PixelCopy
 import android.os.HandlerThread
 import android.content.ContextWrapper
+import com.google.ar.core.Config.GeospatialMode
 import java.io.FileOutputStream
 import java.io.File
 import java.io.IOException
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
-class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMessenger, id: Int, private val isAugmentedFaces: Boolean, private val debug: Boolean) : PlatformView, MethodChannel.MethodCallHandler {
+class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMessenger, id: Int, private val isAugmentedFaces: Boolean, private val debug: Boolean, private val enableGeospatialMode: Boolean = false) : PlatformView, MethodChannel.MethodCallHandler {
     private val methodChannel: MethodChannel = MethodChannel(messenger, "arcore_flutter_plugin_$id")
     //       private val activity: Activity = (context.applicationContext as FlutterApplication).currentActivity
     lateinit var activityLifecycleCallbacks: Application.ActivityLifecycleCallbacks
@@ -546,7 +547,10 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
                         config.augmentedFaceMode = Config.AugmentedFaceMode.MESH3D
                     }
                     config.updateMode = Config.UpdateMode.LATEST_CAMERA_IMAGE
-                    config.focusMode = Config.FocusMode.AUTO;
+                    config.focusMode = Config.FocusMode.AUTO
+                    if (enableGeospatialMode) {
+                        config.geospatialMode = Config.GeospatialMode.ENABLED
+                    }
                     session.configure(config)
                     arSceneView?.setupSession(session)
                 }

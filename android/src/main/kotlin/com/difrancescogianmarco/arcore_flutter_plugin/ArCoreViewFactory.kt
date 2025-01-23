@@ -15,6 +15,7 @@ class ArCoreViewFactory(val activity: Activity, val messenger: BinaryMessenger) 
         val params = args as HashMap<*, *>
         val debug = params["debug"] as Boolean
         val type = params["type"] as String
+        val enableGeospatialMode = params["enableGeospatialMode"] as Boolean
 
         if (debug) {
             Log.i("ArCoreViewFactory", id.toString())
@@ -27,6 +28,6 @@ class ArCoreViewFactory(val activity: Activity, val messenger: BinaryMessenger) 
             val useSingleImage = params["useSingleImage"] as? Boolean ?: true
             return ArCoreAugmentedImagesView(activity, context, messenger, id, useSingleImage, debug)
         }
-        return ArCoreView(activity, context, messenger, id, type == "faces", debug)
+        return ArCoreView(activity, context, messenger, id, type == "faces", debug, enableGeospatialMode)
     }
 }

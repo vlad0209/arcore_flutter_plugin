@@ -9,13 +9,15 @@ class ArCoreAndroidView extends AndroidView {
   final PlatformViewCreatedCallback? onPlatformViewCreated;
   final ArCoreViewType arCoreViewType;
   final bool debug;
+  final bool enableGeospatialMode;
 
   ArCoreAndroidView(
       {Key? key,
       required this.viewType,
       this.onPlatformViewCreated,
       this.arCoreViewType = ArCoreViewType.STANDARDVIEW,
-      this.debug = false})
+      this.debug = false,
+      this.enableGeospatialMode = false})
       : super(
           viewType: viewType,
           onPlatformViewCreated: onPlatformViewCreated,
@@ -25,7 +27,8 @@ class ArCoreAndroidView extends AndroidView {
                 : arCoreViewType == ArCoreViewType.AUGMENTEDIMAGES
                     ? "augmented"
                     : "standard",
-            "debug": debug
+            "debug": debug,
+            "enableGeospatialModel": enableGeospatialMode
           },
           creationParamsCodec: const StandardMessageCodec(),
         );

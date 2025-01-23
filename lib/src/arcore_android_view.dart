@@ -28,7 +28,7 @@ class ArCoreAndroidView extends AndroidView {
                     ? "augmented"
                     : "standard",
             "debug": debug,
-            "enableGeospatialModel": enableGeospatialMode
+            "enableGeospatialMode": enableGeospatialMode
           },
           creationParamsCodec: const StandardMessageCodec(),
         );

@@ -510,7 +510,7 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
     }
 
     override fun getView(): View {
-        return arSceneView as View
+        return arSceneView ?: ArSceneView(activity)
     }
 
     override fun dispose() {

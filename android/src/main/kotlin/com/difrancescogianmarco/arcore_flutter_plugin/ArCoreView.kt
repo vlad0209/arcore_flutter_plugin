@@ -98,6 +98,20 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
                     methodChannel.invokeMethod("onPlaneDetected", map)
                 }
             }
+            if(enableGeospatialMode) {
+                val session = arSceneView?.session;
+                val earth = session?.earth
+                if (earth?.trackingState == TrackingState.TRACKING) {
+                    val cameraGeospatialPose = earth.cameraGeospatialPose
+                    val map: HashMap<String, Any> = HashMap<String, Any>()
+                    map["latitude"] = cameraGeospatialPose.latitude
+                    map["longitude"] = cameraGeospatialPose.longitude
+                    map["altitude"] = cameraGeospatialPose.altitude
+                    map["eastUpSouthQuaternion"] = cameraGeospatialPose.eastUpSouthQuaternion
+
+                    methodChannel.invokeMethod("onCameraGeospatialPoseDetected", map)
+                }
+            }
         }
 
         faceSceneUpdateListener = Scene.OnUpdateListener { frameTime ->

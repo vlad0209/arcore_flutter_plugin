@@ -108,6 +108,9 @@ class ArCoreView(val activity: Activity, context: Context, messenger: BinaryMess
                     map["longitude"] = cameraGeospatialPose.longitude
                     map["altitude"] = cameraGeospatialPose.altitude
                     map["eastUpSouthQuaternion"] = cameraGeospatialPose.eastUpSouthQuaternion
+                    map["horizontalAccuracy"] = cameraGeospatialPose.horizontalAccuracy
+                    map["orientationYawAccuracy"] = cameraGeospatialPose.orientationYawAccuracy
+                    map["verticalAccuracy"] = cameraGeospatialPose.verticalAccuracy
 
                     methodChannel.invokeMethod("onCameraGeospatialPoseDetected", map)
                 }

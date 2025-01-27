@@ -1,4 +1,5 @@
 import 'package:arcore_flutter_plugin/src/arcore_augmented_image.dart';
+import 'package:arcore_flutter_plugin/src/arcore_geospatial_pose.dart';
 import 'package:arcore_flutter_plugin/src/arcore_rotating_node.dart';
 import 'package:arcore_flutter_plugin/src/utils/vector_utils.dart';
 import 'package:flutter/services.dart';
@@ -12,6 +13,7 @@ typedef StringResultHandler = void Function(String text);
 typedef UnsupportedHandler = void Function(String text);
 typedef ArCoreHitResultHandler = void Function(List<ArCoreHitTestResult> hits);
 typedef ArCorePlaneHandler = void Function(ArCorePlane plane);
+typedef ArCoreCameraGeospatialPoseHandler = void Function(ArcoreGeospatialPose cameraGeospatialPose);
 typedef ArCoreAugmentedImageTrackingHandler = void Function(
     ArCoreAugmentedImage);
 
@@ -55,8 +57,10 @@ class ArCoreController {
 //  UnsupportedHandler onUnsupported;
   ArCoreHitResultHandler? onPlaneTap;
   ArCorePlaneHandler? onPlaneDetected;
+  ArCoreCameraGeospatialPoseHandler? onCameraGeospatialPoseDetected;
   String trackingState = '';
   ArCoreAugmentedImageTrackingHandler? onTrackingImage;
+  
 
   init() async {
     try {
@@ -101,6 +105,12 @@ class ArCoreController {
         if (enableUpdateListener ?? true && onPlaneDetected != null) {
           final plane = ArCorePlane.fromMap(call.arguments);
           onPlaneDetected!(plane);
+        }
+        break;
+      case 'onCameraGeospatialPoseDetected':
+        if (enableUpdateListener ?? true && onCameraGeospatialPoseDetected != null) {
+          final pose = ArcoreGeospatialPose.fromMap(call.arguments);
+          onCameraGeospatialPoseDetected!(pose);
         }
         break;
       case 'getTrackingState':

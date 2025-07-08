@@ -343,29 +343,48 @@ class ArCoreAugmentedImagesView(activity: Activity, context: Context, messenger:
         }
     }
 
-    private fun addMultipleImagesToAugmentedImageDatabase(config: Config, bytesMap: Map<String, ByteArray>, session: Session) {
-        debugLog( "addImageToAugmentedImageDatabase")
-        val augmentedImageDatabase = AugmentedImageDatabase(arSceneView?.session)
+    private fun addMultipleImagesToAugmentedImageDatabase(
+        config: Config,
+        bytesMap: Map<String, ByteArray>,
+        session: Session
+    ) {
+        debugLog("addImageToAugmentedImageDatabase")
 
         launch {
-            val operation = async(Dispatchers.Default) {
-                for ((key, value) in bytesMap) {
-                    val augmentedImageBitmap = loadAugmentedImageBitmap(value)
-                    try {
-                        augmentedImageDatabase.addImage(key, augmentedImageBitmap)
-                    } catch (ex: Exception) {
-                        debugLog("Image with the title $key cannot be added to the database. " +
-                                "The exception was thrown: " + ex?.toString())
+            withContext(Dispatchers.Main) {
+                methodChannel.invokeMethod("onDatabaseLoadingStart", null)
+            }
+            try {
+                val augmentedImageDatabase = withContext(Dispatchers.Default) {
+                    val db = AugmentedImageDatabase(arSceneView?.session)
+                    for ((key, value) in bytesMap) {
+                        val augmentedImageBitmap = loadAugmentedImageBitmap(value)
+                        try {
+                            db.addImage(key, augmentedImageBitmap)
+                        } catch (ex: Exception) {
+                            debugLog("Image with title $key cannot be added. Exception: ${ex.localizedMessage}")
+                        }
                     }
+                    if (db.getNumImages() == 0) {
+                        throw Exception("Could not setup augmented image database")
+                    }
+                    db
                 }
-                if (augmentedImageDatabase?.getNumImages() == 0) {
-                    throw Exception("Could not setup augmented image database")
-                }
+
                 config.augmentedImageDatabase = augmentedImageDatabase
                 session.configure(config)
-                arSceneView?.setupSession(session)
+
+                withContext(Dispatchers.Main) {
+                    arSceneView?.setupSession(session)
+                    methodChannel.invokeMethod("onDatabaseLoadingEnd", null)
+                }
+
+            } catch (ex: Exception) {
+                debugLog("Exception during DB setup: ${ex.localizedMessage}")
+                withContext(Dispatchers.Main) {
+                    methodChannel.invokeMethod("onDatabaseLoadingError", ex.localizedMessage)
+                }
             }
-            operation.await()
         }
     }
 

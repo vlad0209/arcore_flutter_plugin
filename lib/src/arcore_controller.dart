@@ -16,6 +16,9 @@ typedef ArCorePlaneHandler = void Function(ArCorePlane plane);
 typedef ArCoreCameraGeospatialPoseHandler = void Function(ArcoreGeospatialPose cameraGeospatialPose);
 typedef ArCoreAugmentedImageTrackingHandler = void Function(
     ArCoreAugmentedImage);
+typedef ArCoreDatabaseLoadingStartHandler = void Function();
+typedef ArCoreDatabaseLoadingErrorHandler = void Function(String error);
+typedef ArCoreDatabaseLoadingSuccessHandler = void Function();
 
 const UTILS_CHANNEL_NAME = 'arcore_flutter_plugin/utils';
 
@@ -60,6 +63,9 @@ class ArCoreController {
   ArCoreCameraGeospatialPoseHandler? onCameraGeospatialPoseDetected;
   String trackingState = '';
   ArCoreAugmentedImageTrackingHandler? onTrackingImage;
+  ArCoreDatabaseLoadingStartHandler? onDatabaseLoadingStart;
+  ArCoreDatabaseLoadingErrorHandler? onDatabaseLoadingError;
+  ArCoreDatabaseLoadingSuccessHandler? onDatabaseLoadingSuccess;
   
 
   init() async {
@@ -133,6 +139,21 @@ class ArCoreController {
           print('Toggling Plane Renderer Visibility');
         }
         togglePlaneRenderer();
+        break;
+      case "onDatabaseLoadingStart":
+        if (onDatabaseLoadingStart != null) {
+          onDatabaseLoadingStart!();
+        }
+        break;
+      case "onDatabaseLoadingError":
+        if (onDatabaseLoadingError != null) {
+          onDatabaseLoadingError!(call.arguments);
+        }
+        break;
+      case "onDatabaseLoadingEnd":
+        if (onDatabaseLoadingSuccess != null) {
+          onDatabaseLoadingSuccess!();
+        }
         break;
 
       default:

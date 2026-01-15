@@ -357,10 +357,17 @@ class ArCoreAugmentedImagesView(activity: Activity, context: Context, messenger:
             try {
                 val augmentedImageDatabase = withContext(Dispatchers.Default) {
                     val db = AugmentedImageDatabase(arSceneView?.session)
-                    for ((key, value) in bytesMap) {
-                        val augmentedImageBitmap = loadAugmentedImageBitmap(value)
+                    val bitmaps = coroutineScope {
+                        bytesMap.map { (key, bytes) ->
+                            async(Dispatchers.Default) {
+                                key to loadAugmentedImageBitmap(bytes)
+                            }
+                        }.awaitAll()
+                    }
+
+                    for ((key, bitmap) in bitmaps) {
                         try {
-                            db.addImage(key, augmentedImageBitmap)
+                            db.addImage(key, bitmap)
                         } catch (ex: Exception) {
                             debugLog("Image with title $key cannot be added. Exception: ${ex.localizedMessage}")
                         }

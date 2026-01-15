@@ -3,7 +3,6 @@ import 'package:arcore_flutter_plugin/src/arcore_geospatial_pose.dart';
 import 'package:arcore_flutter_plugin/src/arcore_rotating_node.dart';
 import 'package:arcore_flutter_plugin/src/utils/vector_utils.dart';
 import 'package:flutter/services.dart';
-import 'package:meta/meta.dart';
 
 import 'arcore_hit_test_result.dart';
 import 'arcore_node.dart';
@@ -13,7 +12,8 @@ typedef StringResultHandler = void Function(String text);
 typedef UnsupportedHandler = void Function(String text);
 typedef ArCoreHitResultHandler = void Function(List<ArCoreHitTestResult> hits);
 typedef ArCorePlaneHandler = void Function(ArCorePlane plane);
-typedef ArCoreCameraGeospatialPoseHandler = void Function(ArcoreGeospatialPose cameraGeospatialPose);
+typedef ArCoreCameraGeospatialPoseHandler = void Function(
+    ArcoreGeospatialPose cameraGeospatialPose);
 typedef ArCoreAugmentedImageTrackingHandler = void Function(
     ArCoreAugmentedImage);
 typedef ArCoreDatabaseLoadingStartHandler = void Function();
@@ -66,7 +66,6 @@ class ArCoreController {
   ArCoreDatabaseLoadingStartHandler? onDatabaseLoadingStart;
   ArCoreDatabaseLoadingErrorHandler? onDatabaseLoadingError;
   ArCoreDatabaseLoadingSuccessHandler? onDatabaseLoadingSuccess;
-  
 
   init() async {
     try {
@@ -114,7 +113,8 @@ class ArCoreController {
         }
         break;
       case 'onCameraGeospatialPoseDetected':
-        if (enableUpdateListener ?? true && onCameraGeospatialPoseDetected != null) {
+        if (enableUpdateListener ??
+            true && onCameraGeospatialPoseDetected != null) {
           final pose = ArcoreGeospatialPose.fromMap(call.arguments);
           onCameraGeospatialPoseDetected!(pose);
         }
@@ -201,7 +201,7 @@ class ArCoreController {
     return _channel.invokeMethod('addArCoreNodeWithAnchor', params);
   }
 
-  Future<void> removeNode({@required String? nodeName}) {
+  Future<void> removeNode({required String? nodeName}) {
     assert(nodeName != null);
     return _channel.invokeMethod('removeARCoreNode', {'nodeName': nodeName});
   }
@@ -251,14 +251,14 @@ class ArCoreController {
   }
 
   Future<void> loadMultipleAugmentedImage(
-      {@required Map<String, Uint8List>? bytesMap}) {
+      {required Map<String, Uint8List>? bytesMap}) {
     assert(bytesMap != null);
     return _channel.invokeMethod('load_multiple_images_on_db', {
       'bytesMap': bytesMap,
     });
   }
 
-  Future<void> loadAugmentedImagesDatabase({@required Uint8List? bytes}) {
+  Future<void> loadAugmentedImagesDatabase({required Uint8List? bytes}) {
     assert(bytes != null);
     return _channel.invokeMethod('load_augmented_images_database', {
       'bytes': bytes,

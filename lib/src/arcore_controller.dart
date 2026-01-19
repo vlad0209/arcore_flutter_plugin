@@ -265,6 +265,12 @@ class ArCoreController {
     });
   }
 
+  Future<void> loadAugmentedImagesDatabaseFile({required String databasePath}) {
+    return _channel.invokeMethod('load_augmented_images_database_file', {
+      'databasePath': databasePath,
+    });
+  }
+
   void dispose() {
     _channel.invokeMethod<void>('dispose');
   }

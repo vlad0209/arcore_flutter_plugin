@@ -1,5 +1,6 @@
 package com.difrancescogianmarco.arcore_flutter_plugin
 
+import android.R
 import android.app.Activity
 import android.content.Context
 import android.graphics.Bitmap
@@ -30,6 +31,8 @@ import com.google.ar.core.exceptions.*
 import com.google.ar.core.*
 import com.google.ar.sceneform.HitTestResult
 import kotlinx.coroutines.*
+import java.io.File
+import java.io.FileInputStream
 import kotlin.coroutines.CoroutineContext
 
 class ArCoreAugmentedImagesView(activity: Activity, context: Context, messenger: BinaryMessenger, id: Int, val useSingleImage: Boolean, debug: Boolean) : BaseArCoreView(activity, context, messenger, id, debug), CoroutineScope {
@@ -161,7 +164,7 @@ class ArCoreAugmentedImagesView(activity: Activity, context: Context, messenger:
                     debugLog( "load_single_image_on_db")
                     val map = call.arguments as HashMap<String, Any>
                     val singleImageBytes = map["bytes"] as? ByteArray
-                    setupSession(singleImageBytes, true)
+                    setupSession(singleImageBytes, true, null)
                 }
                 "load_multiple_images_on_db" -> {
                     debugLog( "load_multiple_image_on_db")
@@ -173,7 +176,13 @@ class ArCoreAugmentedImagesView(activity: Activity, context: Context, messenger:
                     debugLog( "LOAD DB")
                     val map = call.arguments as HashMap<String, Any>
                     val dbByteArray = map["bytes"] as? ByteArray
-                    setupSession(dbByteArray, false)
+                    setupSession(dbByteArray, false, null)
+                }
+                "load_augmented_images_database_file" -> {
+                    debugLog( "LOAD DB FILE")
+                    val map = call.arguments as HashMap<String, Any>
+                    val path = map["databasePath"] as String
+                    setupSession(null, false, path)
                 }
                 "attachObjectToAugmentedImage" -> {
                     debugLog( "attachObjectToAugmentedImage")
@@ -303,7 +312,7 @@ class ArCoreAugmentedImagesView(activity: Activity, context: Context, messenger:
         }
     }
 
-    fun setupSession(bytes: ByteArray?, useSingleImage: Boolean) {
+    fun setupSession(bytes: ByteArray?, useSingleImage: Boolean, imageDbPath: String?) {
         debugLog( "setupSession()")
         try {
             val session = arSceneView?.session ?: return
@@ -319,6 +328,11 @@ class ArCoreAugmentedImagesView(activity: Activity, context: Context, messenger:
                     if (!useExistingAugmentedImageDatabase(config, bytes)) {
                         throw Exception("Could not setup augmented image database")
                     }
+                }
+            }
+            imageDbPath?.let {
+                if(!loadAugmentedImageDatabaseFile(config, imageDbPath)) {
+                    throw Exception("Could not setup augmented image database")
                 }
             }
             session.configure(config)
@@ -429,6 +443,20 @@ class ArCoreAugmentedImagesView(activity: Activity, context: Context, messenger:
         } catch (e: Exception) {
             Log.e(TAG, "IO exception loading augmented image bitmap.", e)
             return  null
+        }
+    }
+
+    private fun loadAugmentedImageDatabaseFile(config: Config, path: String): Boolean {
+        return try {
+            val file = File(path)
+            val imageDatabase = FileInputStream(file).use {
+                AugmentedImageDatabase.deserialize(arSceneView?.session, it)
+            }
+            config.augmentedImageDatabase = imageDatabase
+            true
+        } catch (e: Exception) {
+            Log.e(TAG, "IO exception loading augmented image file.", e)
+            false
         }
     }
 

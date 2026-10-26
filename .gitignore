@@ -128,3 +128,4 @@ app.*.symbols
 !/dev/ci/**/Gemfile.lock
 
 .fvm
+example/ios/Flutter/ephemeral/flutter_native_integration.env

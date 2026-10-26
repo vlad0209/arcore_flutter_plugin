@@ -25,30 +25,15 @@ To use this plugin, add arcore_flutter_plugin as a [dependency in your pubspec.y
 
 1. Follow [official guide](https://developers.google.com/ar/develop/java/enable-arcore) to enable ArCore
 
-2. Add the Sceneform library to your app's build.gradle file:
+2. Configure your Android app for the plugin's rendering library, [SceneView](https://github.com/SceneView/sceneview-android) (Filament + ARCore), which supports devices with 16 KB memory page sizes:
+    - Kotlin Gradle plugin 2.2 or newer
+    - Android Gradle plugin 8.5.1 or newer (packages native libraries 16 KB aligned)
+    - `compileSdk 36`
+    - Java 17 (`sourceCompatibility`/`targetCompatibility` and `jvmTarget`)
 
-```
-android {
-    // Sceneform libraries use language constructs from Java 8.
-    // Add these compile options if targeting minSdkVersion < 26.
-    compileOptions {
-        sourceCompatibility 1.8
-        targetCompatibility 1.8
-    }
-}
+   Do not add Sceneform to your app: its native libraries are not 16 KB aligned.
 
-dependencies {
-    …
-
-    // Provides ArFragment, and other UX resources.
-    implementation 'com.google.ar.sceneform.ux:sceneform-ux:1.8.0'
-
-    // Alternatively, use ArSceneView without the UX dependency.
-    implementation 'com.google.ar.sceneform:core:1.8.0'
-}
-```
-
-3. [Import the Sceneform plugin into your project](https://developers.google.com/ar/develop/java/sceneform/#import-sceneform-plugin) (OPTIONAL)
+3. 3D models must be glTF (`.glb` or `.gltf`). Sceneform `.sfb` files are no longer supported.
 
 ## Example
 
@@ -283,4 +268,4 @@ URL of glft object for remote rendering.
 ---
 
 ### object3DFileName
-Filename of sfb object in assets folder.
+Filename of a glTF (`.glb` or `.gltf`) object in the Android assets folder.

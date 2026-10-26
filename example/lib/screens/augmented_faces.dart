@@ -39,7 +39,7 @@ class _AugmentedFacesScreenState extends State<AugmentedFacesScreen> {
 
     arCoreFaceController?.loadMesh(
         textureBytes: textureBytes.buffer.asUint8List(),
-        skin3DModelFilename: 'fox_face.sfb');
+        skin3DModelFilename: 'fox_face.glb');
   }
 
   @override

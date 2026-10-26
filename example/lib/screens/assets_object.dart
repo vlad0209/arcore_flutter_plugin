@@ -114,9 +114,9 @@ class _ListObjectSelectionState extends State<ListObjectSelection> {
   ];
 
   List<String> objectsFileName = [
-    'toucan.sfb',
-    'andy.sfb',
-    'artic_fox.sfb',
+    'toucan.glb',
+    'andy.glb',
+    'artic_fox.glb',
   ];
 
   String? selected;

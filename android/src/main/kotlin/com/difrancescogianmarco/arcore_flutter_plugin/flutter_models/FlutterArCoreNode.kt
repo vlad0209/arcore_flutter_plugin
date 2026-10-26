@@ -3,10 +3,11 @@ package com.difrancescogianmarco.arcore_flutter_plugin.flutter_models
 import com.difrancescogianmarco.arcore_flutter_plugin.models.RotatingNode
 import com.difrancescogianmarco.arcore_flutter_plugin.utils.DecodableUtils.Companion.parseQuaternion
 import com.difrancescogianmarco.arcore_flutter_plugin.utils.DecodableUtils.Companion.parseVector3
+import com.difrancescogianmarco.arcore_flutter_plugin.models.ArCoreNode
+import com.google.android.filament.Engine
 import com.google.ar.core.Pose
-import com.google.ar.sceneform.Node
-import com.google.ar.sceneform.math.Quaternion
-import com.google.ar.sceneform.math.Vector3
+import dev.romainguy.kotlin.math.Float3
+import dev.romainguy.kotlin.math.Quaternion
 
 class FlutterArCoreNode(map: HashMap<String, *>) {
 
@@ -16,9 +17,9 @@ class FlutterArCoreNode(map: HashMap<String, *>) {
     val objectUrl: String? = map["objectUrl"] as? String
     val object3DFileName: String? = map["object3DFileName"] as? String
     val shape: FlutterArCoreShape? = getShape(map["shape"] as? HashMap<String, *>)
-    val position: Vector3 = parseVector3(map["position"] as? HashMap<String, *>) ?: Vector3()
-    val scale: Vector3 = parseVector3(map["scale"] as? HashMap<String, *>)
-            ?: Vector3(1.0F, 1.0F, 1.0F)
+    val position: Float3 = parseVector3(map["position"] as? HashMap<String, *>) ?: Float3()
+    val scale: Float3 = parseVector3(map["scale"] as? HashMap<String, *>)
+            ?: Float3(1.0F, 1.0F, 1.0F)
     val rotation: Quaternion = parseQuaternion(map["rotation"] as? HashMap<String, Double>)
             ?: Quaternion()
     val degreesPerSecond: Float? = getDegreesPerSecond((map["degreesPerSecond"] as? Double))
@@ -30,18 +31,17 @@ class FlutterArCoreNode(map: HashMap<String, *>) {
         return ArrayList(list.map { map -> FlutterArCoreNode(map) })
     }
 
-    fun buildNode(): Node {
-        lateinit var node: Node
-        if (degreesPerSecond != null) {
-            node = RotatingNode(degreesPerSecond, true, 0.0f)
+    fun buildNode(engine: Engine): ArCoreNode {
+        val node = if (degreesPerSecond != null) {
+            RotatingNode(engine, degreesPerSecond)
         } else {
-            node = Node()
+            ArCoreNode(engine)
         }
 
         node.name = name
-        node.localPosition = position
-        node.localScale = scale
-        node.localRotation = rotation
+        node.position = position
+        node.scale = scale
+        node.quaternion = rotation
 
         return node
     }

@@ -3,74 +3,31 @@ package com.difrancescogianmarco.arcore_flutter_plugin
 import android.app.Activity
 import android.content.Context
 import android.graphics.BitmapFactory
-import android.net.Uri
 import android.util.Log
-import com.difrancescogianmarco.arcore_flutter_plugin.utils.ArCoreUtils
+import com.difrancescogianmarco.arcore_flutter_plugin.models.destroyRecursively
+import com.google.android.filament.MaterialInstance
 import com.google.ar.core.AugmentedFace
 import com.google.ar.core.Config
+import com.google.ar.core.Frame
+import com.google.ar.core.Session
 import com.google.ar.core.TrackingState
-import com.google.ar.core.exceptions.CameraNotAvailableException
-import com.google.ar.core.exceptions.UnavailableException
-import com.google.ar.sceneform.ArSceneView
-import com.google.ar.sceneform.Scene
-import com.google.ar.sceneform.rendering.ModelRenderable
-import com.google.ar.sceneform.rendering.Renderable
-import com.google.ar.sceneform.rendering.Texture
-import com.google.ar.sceneform.ux.AugmentedFaceNode
 import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
-import kotlin.collections.HashMap
+import io.github.sceneview.ar.node.AugmentedFaceNode
+import io.github.sceneview.node.ModelNode
+import io.github.sceneview.texture.ImageTexture
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.launch
 
-class ArCoreFaceView(activity:Activity,context: Context, messenger: BinaryMessenger, id: Int, debug: Boolean) : BaseArCoreView(activity, context, messenger, id, debug) {
+class ArCoreFaceView(activity: Activity, context: Context, messenger: BinaryMessenger, id: Int, debug: Boolean) : BaseArCoreView(activity, context, messenger, id, debug, setOf(Session.Feature.FRONT_CAMERA)) {
 
     private val TAG: String = ArCoreFaceView::class.java.name
-    private var faceRegionsRenderable: ModelRenderable? = null
-    private var faceMeshTexture: Texture? = null
+    private var isAugmentedFacesEnabled = false
+    private var faceMeshMaterial: MaterialInstance? = null
+    private var faceModelFileLocation: String? = null
     private val faceNodeMap = HashMap<AugmentedFace, AugmentedFaceNode>()
-    private var faceSceneUpdateListener: Scene.OnUpdateListener
-
-    init {
-        faceSceneUpdateListener = Scene.OnUpdateListener { frameTime ->
-            run {
-                //                if (faceRegionsRenderable == null || faceMeshTexture == null) {
-                if (faceMeshTexture == null) {
-                    return@OnUpdateListener
-                }
-                val faceList = arSceneView?.session?.getAllTrackables(AugmentedFace::class.java)
-
-                faceList?.let {
-                    // Make new AugmentedFaceNodes for any new faces.
-                    for (face in faceList) {
-                        if (!faceNodeMap.containsKey(face)) {
-                            val faceNode = AugmentedFaceNode(face)
-                            faceNode.setParent(arSceneView?.scene)
-                            faceNode.faceRegionsRenderable = faceRegionsRenderable
-                            faceNode.faceMeshTexture = faceMeshTexture
-                            faceNodeMap[face] = faceNode
-
-                            // change assets on runtime
-                        } else if(faceNodeMap[face]?.faceRegionsRenderable != faceRegionsRenderable  ||  faceNodeMap[face]?.faceMeshTexture != faceMeshTexture ){
-                            faceNodeMap[face]?.faceRegionsRenderable = faceRegionsRenderable
-                            faceNodeMap[face]?.faceMeshTexture = faceMeshTexture
-                        }
-                    }
-
-                    // Remove any AugmentedFaceNodes associated with an AugmentedFace that stopped tracking.
-                    val iter = faceNodeMap.iterator()
-                    while (iter.hasNext()) {
-                        val entry = iter.next()
-                        val face = entry.key
-                        if (face.trackingState == TrackingState.STOPPED) {
-                            val faceNode = entry.value
-                            faceNode.setParent(null)
-                            iter.remove()
-                        }
-                    }
-                }
-            }
-        }
-    }
+    private val faceModelNodes = HashMap<AugmentedFaceNode, ModelNode>()
 
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
         if(isSupportedDevice){
@@ -84,6 +41,7 @@ class ArCoreFaceView(activity:Activity,context: Context, messenger: BinaryMessen
                     val textureBytes = map["textureBytes"] as ByteArray
                     val skin3DModelFilename = map["skin3DModelFilename"] as? String
                     loadMesh(textureBytes, skin3DModelFilename)
+                    result.success(null)
                 }
                 "dispose" -> {
                     debugLog( " updateMaterials")
@@ -99,83 +57,99 @@ class ArCoreFaceView(activity:Activity,context: Context, messenger: BinaryMessen
         }
     }
 
-    fun loadMesh(textureBytes: ByteArray?, skin3DModelFilename: String?) {
-        if (skin3DModelFilename != null) {
-            // Load the face regions renderable.
-            // This is a skinned model that renders 3D objects mapped to the regions of the augmented face.
-            ModelRenderable.builder()
-                    .setSource(activity, Uri.parse(skin3DModelFilename))
-                    .build()
-                    .thenAccept { modelRenderable ->
-                        faceRegionsRenderable = modelRenderable
-                        modelRenderable.isShadowCaster = false
-                        modelRenderable.isShadowReceiver = false
-                    }
+    override fun configureSession(session: Session, config: Config) {
+        super.configureSession(session, config)
+        config.augmentedFaceMode = Config.AugmentedFaceMode.MESH3D
+    }
+
+    override fun onSessionUpdated(session: Session, frame: Frame) {
+        if (!isAugmentedFacesEnabled || faceMeshMaterial == null) {
+            return
+        }
+        val sceneView = arSceneView ?: return
+
+        // Make new AugmentedFaceNodes for any new faces.
+        for (face in session.getAllTrackables(AugmentedFace::class.java)) {
+            if (!faceNodeMap.containsKey(face) && face.trackingState == TrackingState.TRACKING) {
+                val faceNode = AugmentedFaceNode(sceneView.engine, face, faceMeshMaterial)
+                sceneView.addChildNode(faceNode)
+                faceNodeMap[face] = faceNode
+                loadFaceModel(faceNode)
+            }
         }
 
+        // Remove any AugmentedFaceNodes associated with an AugmentedFace that stopped tracking.
+        val iter = faceNodeMap.iterator()
+        while (iter.hasNext()) {
+            val entry = iter.next()
+            if (entry.key.trackingState == TrackingState.STOPPED) {
+                val faceNode = entry.value
+                faceModelNodes.remove(faceNode)
+                sceneView.removeChildNode(faceNode)
+                faceNode.destroyRecursively()
+                iter.remove()
+            }
+        }
+    }
+
+    fun loadMesh(textureBytes: ByteArray?, skin3DModelFilename: String?) {
+        val sceneView = arSceneView ?: return
+
         // Load the face mesh texture.
-        Texture.builder()
-                //.setSource(activity, Uri.parse("fox_face_mesh_texture.png"))
-                .setSource(BitmapFactory.decodeByteArray(textureBytes, 0, textureBytes!!.size))
-                .build()
-                .thenAccept { texture -> faceMeshTexture = texture }
+        val bitmap = BitmapFactory.decodeByteArray(textureBytes, 0, textureBytes!!.size)
+        if (bitmap == null) {
+            Log.e(TAG, "Unable to decode face mesh texture")
+        } else {
+            val texture = ImageTexture.Builder().bitmap(bitmap).build(sceneView.engine)
+            val material = sceneView.materialLoader.createImageInstance(texture)
+            faceMeshMaterial = material
+            // change assets on runtime
+            faceNodeMap.values.forEach { it.meshNode.materialInstance = material }
+        }
+
+        // Load the face regions model, rendered at the center of the face.
+        // Must be a glTF (.glb or .gltf) model: Sceneform .sfb files are no longer supported.
+        if (skin3DModelFilename != null && skin3DModelFilename != faceModelFileLocation) {
+            faceModelFileLocation = skin3DModelFilename
+            faceNodeMap.values.forEach { loadFaceModel(it) }
+        }
+    }
+
+    private fun loadFaceModel(faceNode: AugmentedFaceNode) {
+        val fileLocation = faceModelFileLocation ?: return
+        val sceneView = arSceneView ?: return
+        mainScope.launch {
+            try {
+                val modelInstance = sceneView.modelLoader.loadModelInstance(fileLocation) ?: return@launch
+                if (faceNodeMap.containsValue(faceNode) && fileLocation == faceModelFileLocation) {
+                    val modelNode = ModelNode(modelInstance)
+                    faceModelNodes.put(faceNode, modelNode)?.let {
+                        faceNode.centerNode.removeChildNode(it)
+                        it.destroyRecursively()
+                    }
+                    faceNode.centerNode.addChildNode(modelNode)
+                }
+            } catch (ex: CancellationException) {
+                throw ex
+            } catch (ex: Exception) {
+                Log.e(TAG, "Unable to load face model $fileLocation", ex)
+            }
+        }
     }
 
     private fun arScenViewInit(call: MethodCall, result: MethodChannel.Result) {
         val enableAugmentedFaces: Boolean? = call.argument("enableAugmentedFaces")
         if (enableAugmentedFaces != null && enableAugmentedFaces) {
-            // This is important to make sure that the camera stream renders first so that
-            // the face mesh occlusion works correctly.
-            arSceneView?.cameraStreamRenderPriority = Renderable.RENDER_PRIORITY_FIRST
-            arSceneView?.scene?.addOnUpdateListener(faceSceneUpdateListener)
+            isAugmentedFacesEnabled = true
         }
 
         result.success(null)
     }
 
-    override fun onResume() {
-        if (arSceneView == null) {
-            return
-        }
-
-        if (arSceneView?.session == null) {
-
-            // request camera permission if not already requested
-            if (!ArCoreUtils.hasCameraPermission(activity)) {
-                ArCoreUtils.requestCameraPermission(activity, RC_PERMISSIONS)
-            }
-
-            // If the session wasn't created yet, don't resume rendering.
-            // This can happen if ARCore needs to be updated or permissions are not granted yet.
-            try {
-                val session = ArCoreUtils.createArSession(activity, installRequested, true)
-                if (session == null) {
-                    installRequested = false
-                    return
-                } else {
-                    val config = Config(session)
-                    config.augmentedFaceMode = Config.AugmentedFaceMode.MESH3D
-                    config.updateMode = Config.UpdateMode.LATEST_CAMERA_IMAGE
-                    session.configure(config)
-                    arSceneView?.setupSession(session)
-                }
-            } catch (e: UnavailableException) {
-                ArCoreUtils.handleSessionException(activity, e)
-            }
-        }
-
-        try {
-            arSceneView?.resume()
-        } catch (ex: CameraNotAvailableException) {
-            ArCoreUtils.displayError(activity, "Unable to get camera", ex)
-            activity.finish()
-            return
-        }
-
-    }
-
     override fun onDestroy() {
-        arSceneView?.scene?.removeOnUpdateListener(faceSceneUpdateListener)
+        isAugmentedFacesEnabled = false
+        faceNodeMap.clear()
+        faceModelNodes.clear()
         super.onDestroy()
     }
 

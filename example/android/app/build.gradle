@@ -24,7 +24,7 @@ if (flutterVersionName == null) {
 
 android {
     namespace "com.difrancescogianmarco.example"
-    compileSdk 34
+    compileSdk 36
 
     sourceSets {
         main.java.srcDirs += 'src/main/kotlin'
@@ -69,25 +69,4 @@ dependencies {
     testImplementation 'junit:junit:4.12'
     androidTestImplementation 'androidx.test.ext:junit:1.1.1'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.2.0'
-    implementation 'com.google.ar.sceneform:core:1.15.0'
 }
-
-//sceneform.asset('sampledata/Andy.obj',
-//        'default',
-//        'sampledata/Andy.sfa',
-//        'src/main/assets/andy')
-//
-//sceneform.asset('sampledata/TocoToucan.obj',
-//        'default',
-//        'sampledata/TocoToucan.sfa',
-//        'src/main/assets/toucan')
-//
-//sceneform.asset('sampledata/ArcticFox_Posed.obj',
-//        'default',
-//        'sampledata/ArcticFox_Posed.sfa',
-//        'src/main/assets/artic_fox')
-//
-//sceneform.asset('sampledata/fox_face.fbx',
-//        'sampledata/fox_face_material.mat',
-//        'sampledata/fox_face.sfa',
-//        'src/main/assets/fox_face')

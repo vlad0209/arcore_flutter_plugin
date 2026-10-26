@@ -1,3 +1,11 @@
+## Unreleased
+
+* Support devices with 16 KB memory page sizes: replaced Sceneform 1.17.1 (4 KB aligned native libraries) with SceneView 2.3.3
+* Upgraded AR Core to 1.52.0
+* Upgraded kotlin to 2.2.21, compileSdk to 36 and JVM target to 17
+* **Breaking:** 3D models (`object3DFileName`, `skin3DModelFilename`) must be glTF (`.glb` or `.gltf`), Sceneform `.sfb` files are no longer supported
+* **Breaking:** apps must use Kotlin 2.2+, Android Gradle plugin 8.5.1+ and compileSdk 36
+
 ## 0.2.0-alpha
 
 * Upgraded dart constraint >= 3.0.0 < 4.0.0

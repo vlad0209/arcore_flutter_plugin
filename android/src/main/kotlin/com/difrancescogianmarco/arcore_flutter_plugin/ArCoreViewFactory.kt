@@ -28,6 +28,6 @@ class ArCoreViewFactory(val activity: Activity, val messenger: BinaryMessenger) 
             val useSingleImage = params["useSingleImage"] as? Boolean ?: true
             return ArCoreAugmentedImagesView(activity, context, messenger, id, useSingleImage, debug)
         }
-        return ArCoreView(activity, context, messenger, id, type == "faces", debug, enableGeospatialMode)
+        return ArCoreView(activity, context, messenger, id, debug, enableGeospatialMode)
     }
 }

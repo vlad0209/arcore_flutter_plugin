@@ -65,7 +65,7 @@ dependencies {
 
 afterEvaluate {
     def containsEmbeddingDependencies = false
-    for (def configuration : configurations.all) {
+    for (def configuration : configurations) {
         for (def dependency : configuration.dependencies) {
             if (dependency.group == 'io.flutter' &&
                     dependency.name.startsWith('flutter_embedding') &&
